@@ -8,3 +8,5 @@ src/models/checkpoints/*.pth
 
 # Virtual environment
 venv/
+__pycache__/
+*.pyc
