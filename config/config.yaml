@@ -1,0 +1,42 @@
+# =========================================================
+# Route Resilience - Master Config
+# Change data_source to switch datasets (no code changes needed)
+# =========================================================
+
+data_source: "deepglobe"   # options: deepglobe | sentinel2 | cartosat3
+
+paths:
+  raw_dir: "data/raw"
+  interim_dir: "data/interim"
+  processed_dir: "data/processed"
+  checkpoint_dir: "src/models/checkpoints"
+
+deepglobe:
+  train_dir: "data/raw/train"
+  image_size: 1024
+  num_classes: 2          # road vs background
+
+sentinel2:
+  bands: ["B02", "B03", "B04"]   # RGB equivalent
+  resolution_m: 10
+
+cartosat3:
+  resolution_m: 0.25        # placeholder, update when ISRO provides specs
+  bands: ["PAN"]            # placeholder
+
+model:
+  architecture: "unet_resnet34"   # options: unet_resnet34 | deeplabv3plus
+  pretrained: true
+  input_size: 512
+  batch_size: 4              # kept low for CPU/local training
+  epochs: 20
+  learning_rate: 0.0001
+  device: "cpu"               # switch to "cuda" on Colab
+
+graph:
+  centrality_metric: "betweenness"
+  ablation_top_n: 5            # number of gatekeeper nodes to test ablation on
+
+training:
+  val_split: 0.15
+  seed: 42

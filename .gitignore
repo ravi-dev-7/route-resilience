@@ -1,0 +1,10 @@
+# Dataset (too large for GitHub, re-download via kaggle CLI instead)
+data/raw/
+data/interim/
+data/processed/
+
+# Model checkpoints (large files)
+src/models/checkpoints/*.pth
+
+# Virtual environment
+venv/
