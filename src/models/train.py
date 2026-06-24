@@ -1,7 +1,8 @@
 """
 train.py
 Training loop for U-Net + ResNet34 road segmentation model.
-Runs on CPU locally for testing, switch device in config.yaml for Colab GPU.
+Resume-capable: saves checkpoint every epoch so training can continue
+from where it left off if the session disconnects (Colab idle timeout).
 """
 
 import os
@@ -28,7 +29,7 @@ def dice_loss(pred, target, smooth=1e-6):
 
 def train():
     config = load_config()
-    device = torch.device(config["model"]["device"] if torch.cuda.is_available() or config["model"]["device"] == "cpu" else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     train_dir = config["deepglobe"]["train_dir"]
     image_size = config["model"]["input_size"]
@@ -39,16 +40,18 @@ def train():
     checkpoint_dir = config["paths"]["checkpoint_dir"]
 
     os.makedirs(checkpoint_dir, exist_ok=True)
+    resume_path = os.path.join(checkpoint_dir, "last_checkpoint.pth")
+    best_path = os.path.join(checkpoint_dir, "best_model.pth")
 
     print(f"Device: {device}")
 
-    full_dataset = RoadDataset(train_dir, image_size=image_size, augment=True)
+    full_dataset = RoadDataset(train_dir, image_size=image_size, augment=True, simulate_occlusion=True)
     val_size = int(len(full_dataset) * val_split)
     train_size = len(full_dataset) - val_size
     train_set, val_set = random_split(full_dataset, [train_size, val_size])
 
-    train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=0)
-    val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=False, num_workers=0)
+    train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=2)
+    val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=False, num_workers=2)
 
     print(f"Train samples: {train_size}, Val samples: {val_size}")
 
@@ -56,9 +59,22 @@ def train():
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     bce_loss = nn.BCEWithLogitsLoss()
 
+    start_epoch = 0
     best_val_loss = float("inf")
 
-    for epoch in range(epochs):
+    # --- RESUME LOGIC: load last checkpoint if it exists ---
+    if os.path.exists(resume_path):
+        print(f"Found existing checkpoint at {resume_path}, resuming...")
+        checkpoint = torch.load(resume_path, map_location=device)
+        model.load_state_dict(checkpoint["model_state_dict"])
+        optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        start_epoch = checkpoint["epoch"] + 1
+        best_val_loss = checkpoint["best_val_loss"]
+        print(f"Resuming from epoch {start_epoch}, best_val_loss so far: {best_val_loss:.4f}")
+    else:
+        print("No checkpoint found, starting fresh.")
+
+    for epoch in range(start_epoch, epochs):
         model.train()
         train_loss = 0.0
 
@@ -88,11 +104,22 @@ def train():
 
         print(f"Epoch [{epoch+1}/{epochs}] Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f}")
 
+        # --- SAVE CHECKPOINT EVERY EPOCH (for resume) ---
+        torch.save({
+            "epoch": epoch,
+            "model_state_dict": model.state_dict(),
+            "optimizer_state_dict": optimizer.state_dict(),
+            "best_val_loss": best_val_loss,
+            "val_loss": val_loss,
+        }, resume_path)
+
+        # --- SAVE BEST MODEL SEPARATELY (for inference later) ---
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            checkpoint_path = os.path.join(checkpoint_dir, "best_model.pth")
-            torch.save(model.state_dict(), checkpoint_path)
-            print(f"Saved best model to {checkpoint_path}")
+            torch.save(model.state_dict(), best_path)
+            print(f"New best model saved (val_loss: {val_loss:.4f})")
+
+    print("Training complete.")
 
 
 if __name__ == "__main__":
