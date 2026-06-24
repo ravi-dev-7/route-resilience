@@ -8,5 +8,14 @@ src/models/checkpoints/*.pth
 
 # Virtual environment
 venv/
+
+# Python cache
 __pycache__/
 *.pyc
+*.pyo
+
+# IDE
+.idea/
+
+# Jupyter
+.ipynb_checkpoints
