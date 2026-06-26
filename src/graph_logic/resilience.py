@@ -115,7 +115,7 @@ def compute_resilience_index(G: nx.Graph, gatekeeper_nodes: list) -> dict:
 
 if __name__ == "__main__":
     from src.graph_logic.skeletonize import mask_to_skeleton
-    from src.graph_logic.graph_builder import skeleton_to_graph
+    from src.graph_logic.graph_builder import skeleton_to_junction_graph
     from src.graph_logic.centrality import get_gatekeeper_nodes
     import numpy as np
 
@@ -124,7 +124,7 @@ if __name__ == "__main__":
     test_mask[10:90, 45:55] = 1
 
     skeleton = mask_to_skeleton(test_mask)
-    graph = skeleton_to_graph(skeleton)
+    graph = skeleton_to_junction_graph(skeleton)
 
     gatekeepers = get_gatekeeper_nodes(graph, top_n=3)
 

@@ -26,7 +26,7 @@ def get_model():
     if _model is None:
         _model = UNetResNet34(pretrained=False)
         # NOTE: load trained weights once training is done:
-        # _model.load_state_dict(torch.load("src/models/checkpoints/best_model.pth", map_location="cpu"))
+        _model.load_state_dict(torch.load("src/models/checkpoints/best_model.pth", map_location="cpu"))
         _model.eval()
     return _model
 

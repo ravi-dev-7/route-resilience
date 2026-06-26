@@ -7,6 +7,8 @@ Connects segmentation model + graph logic to HTTP endpoints.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from api.routes import segmentation
+from api.routes import graph
+from api.routes import simulation
 
 app = FastAPI(
     title="Route Resilience API",
@@ -24,8 +26,8 @@ app.add_middleware(
 )
 
 app.include_router(segmentation.router, prefix="/api", tags=["Segmentation"])
-
-
+app.include_router(graph.router, prefix="/api", tags=["Graph"])
+app.include_router(simulation.router, prefix="/api", tags=["Simulation"])
 @app.get("/")
 def root():
     return {"status": "Route Resilience API is running"}
